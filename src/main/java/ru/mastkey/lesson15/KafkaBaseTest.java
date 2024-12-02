@@ -1,13 +1,10 @@
 package ru.mastkey.lesson15;
 
-import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
-import ru.mastkey.lesson15.config.KafkaConfig;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -38,6 +35,9 @@ public abstract class KafkaBaseTest {
         producerProps.put("bootstrap.servers", "localhost:9092");
         producerProps.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         producerProps.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        producerProps.put("acks", "all");
+        producerProps.put("retries", 3);
+        producerProps.put("max.in.flight.requests.per.connection", 1);
 
         for (int i = 0; i < numberOfProducers; i++) {
             producers.add(new KafkaProducer<>(producerProps));
@@ -77,5 +77,18 @@ public abstract class KafkaBaseTest {
         });
         blackhole.consume(producers);
         blackhole.consume(consumers);
+    }
+
+    @Benchmark
+    public void kafkaProducersConsumersWithReplication(Blackhole blackhole) {
+        producers.forEach(producer -> {
+            var record = new ProducerRecord<>("test-topic", "key", "value");
+            var sendFuture = producer.send(record);
+            blackhole.consume(sendFuture);
+        });
+        consumers.forEach(consumer -> {
+            var message = consumer.poll(Duration.ofMillis(100));
+            blackhole.consume(message);
+        });
     }
 }

@@ -26,6 +26,15 @@ public class RabbitConsumer {
         });
     }
 
+    public String consumeMessageWithAck(String queueName) throws IOException {
+        var delivery = channel.basicGet(queueName, false);
+        if (delivery != null) {
+            channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+            return new String(delivery.getBody());
+        }
+        return null;
+    }
+
     public void close() {
         try {
             if (channel != null) {

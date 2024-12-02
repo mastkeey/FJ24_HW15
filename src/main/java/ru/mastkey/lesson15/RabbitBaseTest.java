@@ -58,7 +58,27 @@ public abstract class RabbitBaseTest {
                 throw new RuntimeException(e);
             }
         });
+    }
 
+    @Benchmark
+    @SneakyThrows
+    public void testProducerConsumerWithAck(Blackhole blackhole) throws IOException {
+        producers.forEach(producer -> {
+            try {
+                var message = "test_with_ack";
+                producer.send(message, QUEUE_NAME);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        consumers.forEach(consumer -> {
+            try {
+                var message = consumer.consumeMessageWithAck(QUEUE_NAME);
+                blackhole.consume(message);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     @TearDown(Level.Trial)
